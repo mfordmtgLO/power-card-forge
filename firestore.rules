@@ -1,0 +1,141 @@
+// ============================================================
+// Power Card Character Forge — Firestore security rules
+// ------------------------------------------------------------
+// Base rule: a character belongs to exactly one person. Only
+// its owner (ownerUid == your Google sign-in uid) can read,
+// change or delete it. Sign-in is OPEN — any Google account
+// can use the app; isolation comes from these rules, not from
+// any whitelist or account setup.
+//
+// ADMIN (Mike): replace fordmj@gmail.com below with the
+// same email you put in firebase-config.js (ADMIN_EMAIL) and
+// in storage.rules — all three must match exactly. The admin
+// gets two narrow powers, and nothing else:
+//   * READ any character whose sketchStatus is requested,
+//     submitted, done or complete (that is what Mike's Inbox
+//     lists), and any character its owner has pushed for a
+//     game night (campaignPushedAt set — that is what the
+//     Campaigns Band list stages).
+//   * Full access to the campaigns collection (the game-
+//     night ledger) — players never read campaigns.
+//   * Full access to session_pushes (the DM Guide's session
+//     credits pushes) — a player reads only the pushes
+//     addressed to their own sign-in email.
+//   * UPDATE only these fields on any character:
+//     portraitPath, attires, portraitSetComplete, sketchStatus,
+//     sketchCompletedAt, sketchSubmittedToKendoAt, tales
+//     (interim push-back, full-set installation, tales push-back,
+//     batch submit).
+// Everything else is denied by default.
+// ============================================================
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == "fordmj@gmail.com";
+    }
+    function isOwner(data) {
+      return isSignedIn() && data.ownerUid == request.auth.uid;
+    }
+
+    match /characters/{characterId} {
+      // Owner reads their own. Admin reads sketch-queue
+      // characters, and characters pushed to his Band.
+      allow read: if isOwner(resource.data)
+                  || (isAdmin() && resource.data.sketchStatus in ["requested", "submitted", "done", "complete"])
+                  || (isAdmin() && "campaignPushedAt" in resource.data && resource.data.campaignPushedAt != null);
+
+      // A new character must name its creator as the owner.
+      allow create: if isSignedIn()
+                    && request.resource.data.ownerUid == request.auth.uid;
+
+      // Owner may change their character, but never hand it to
+      // somebody else (ownerUid cannot move).
+      // Admin may touch ONLY the seven push-back fields.
+      allow update: if (isOwner(resource.data)
+                      && request.resource.data.ownerUid == resource.data.ownerUid)
+                    || (isAdmin()
+                      && request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(["portraitPath", "attires", "portraitSetComplete", "sketchStatus", "sketchCompletedAt", "sketchSubmittedToKendoAt", "tales"]));
+
+      allow delete: if isOwner(resource.data);
+    }
+
+    // The game-night ledger (CAMPAIGNS-SPEC.md): Mike's
+    // surface only. Players never read campaigns — their
+    // connection to a night lives on their own character doc.
+    match /campaigns/{campaignId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Session credits pushes (SESSION-CREDITS-PUSH-SPEC.md):
+    // after a tabletop run the DM Guide writes ONE doc per
+    // player — { playerEmail, characterName, sessionDate,
+    // sessionLabel, dmName, creditsUrl, pushedAt } — and the
+    // Forge reads them back onto that player's own character
+    // sheets as the Campaign adventures history. Create is
+    // admin-only (in v1 the DM Guide pushes while signed in
+    // as Mike) with the doc shape pinned below; a player may
+    // read only pushes addressed to their own sign-in email;
+    // only the admin may change or remove one (a wrong push
+    // is Mike's to fix). CONTRACT v2: two OPTIONAL fields may
+    // ride along — characterId (the Forge character document
+    // ID; the push's identity, so the credit lands on the
+    // original sheet even when the character played under a
+    // one-night name) and playedAs (that night's display
+    // name). characterName always carries the TRUE name.
+    match /session_pushes/{pushId} {
+      function isValidPush(data) {
+        return data.keys().hasAll(["playerEmail", "characterName", "sessionDate", "sessionLabel", "dmName", "creditsUrl", "pushedAt"])
+          && data.keys().hasOnly(["playerEmail", "characterName", "sessionDate", "sessionLabel", "dmName", "creditsUrl", "pushedAt", "characterId", "playedAs"])
+          && data.playerEmail is string && data.playerEmail.size() > 3 && data.playerEmail.size() <= 254
+          && data.playerEmail.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+          && data.characterName is string && data.characterName.size() > 0 && data.characterName.size() <= 120
+          && data.sessionDate is string && data.sessionDate.matches("^\\d{4}-\\d{2}-\\d{2}$")
+          && data.sessionLabel is string && data.sessionLabel.size() > 0 && data.sessionLabel.size() <= 200
+          && data.dmName is string && data.dmName.size() > 0 && data.dmName.size() <= 120
+          && data.creditsUrl is string && data.creditsUrl.size() <= 2048
+          && data.creditsUrl.matches("^https://.*")
+          && (!("characterId" in data) || (data.characterId is string && data.characterId.size() >= 1 && data.characterId.size() <= 128))
+          && (!("playedAs" in data) || (data.playedAs is string && data.playedAs.size() >= 1 && data.playedAs.size() <= 80))
+          && data.pushedAt is timestamp;
+      }
+      allow create: if isAdmin() && isValidPush(request.resource.data);
+      allow read: if isAdmin()
+                  || (isSignedIn() && resource.data.playerEmail == request.auth.token.email);
+      allow update, delete: if isAdmin();
+    }
+
+    // Saved runs (RUN-SAVE-SPEC.md): one active run per
+    // player, keyed by the player's own sign-in uid — the
+    // document ID IS the account. The game writes the run at
+    // battle boundaries only; finishing or abandoning a run
+    // deletes it. A typed email is never an identity: the
+    // stored playerEmail must match the sign-in token's email
+    // and is display only. Exactly five fields, no others.
+    match /runs/{runId} {
+      function isValidRun(data) {
+        return data.keys().hasAll(["playerEmail", "stateJson", "schemaVersion", "currentBattle", "updatedAt"])
+          && data.keys().hasOnly(["playerEmail", "stateJson", "schemaVersion", "currentBattle", "updatedAt"])
+          && data.playerEmail is string && data.playerEmail == request.auth.token.email
+          && data.stateJson is string && data.stateJson.size() <= 200000
+          && data.schemaVersion is int
+          && data.currentBattle is int && data.currentBattle >= 1 && data.currentBattle <= 17
+          && data.updatedAt is timestamp;
+      }
+      allow read: if isSignedIn() && request.auth.uid == runId;
+      allow create, update: if isSignedIn() && request.auth.uid == runId
+                            && isValidRun(request.resource.data);
+      allow delete: if isSignedIn() && request.auth.uid == runId;
+    }
+
+    // Default-deny: nothing else in the database is reachable.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

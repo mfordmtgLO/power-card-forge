@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<title>Power Card — Character Forge</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- Shown only while firebase-config.js still holds placeholders. -->
+<section id="setupNotice" class="screen" hidden>
+  <div class="card">
+    <h1>Power Card — Character Forge</h1>
+    <p class="big">Setup is not finished yet.</p>
+    <p>This app is not connected to its database yet, so nobody can sign in.
+    The person setting it up needs to paste the Firebase settings into
+    <b>firebase-config.js</b> — the exact clicks are in <b>SETUP.md</b>, step 4.
+    Once that is done, this notice goes away on its own and the sign-in
+    button appears here.</p>
+  </div>
+</section>
+
+<!-- Sign-in gate: every screen of the app sits behind this. -->
+<section id="gate" class="screen" hidden>
+  <div class="card">
+    <h1>Power Card — Character Forge</h1>
+    <p class="big">Character sheets for the Power Card band — plus a forge where you describe your own character and get a sheet just like theirs.</p>
+    <p>Sign in with your Google account. Your characters are yours alone:
+    they save to your account and nobody else can see or change them.
+    There is no password to make and nothing to install.</p>
+    <button id="signInBtn" class="primary" type="button">Sign in with Google</button>
+    <p id="gateError" class="error" role="alert"></p>
+  </div>
+</section>
+
+<!-- The app itself. -->
+<div id="app" hidden>
+  <header class="topbar">
+    <div>
+      <strong>Power Card — Character Forge</strong>
+      <div class="who">Signed in as <span id="whoName"></span> · <span id="whoEmail"></span></div>
+    </div>
+    <button id="signOutBtn" type="button">Sign out</button>
+  </header>
+
+  <nav class="tabs" aria-label="Sections">
+    <button type="button" data-tab="heroes" aria-pressed="true">The Band's Sheets</button>
+    <button type="button" data-tab="mine" aria-pressed="false">My Characters</button>
+    <button type="button" data-tab="forge" aria-pressed="false">Forge a Character</button>
+    <button type="button" data-tab="inbox" id="inboxTab" aria-pressed="false" hidden>Mike's Inbox</button>
+    <button type="button" data-tab="campaigns" id="campaignsTab" aria-pressed="false" hidden>Campaigns</button>
+  </nav>
+
+  <main>
+    <!-- ===== The band's sheets (built-in reference heroes) ===== -->
+    <section id="view-heroes" class="view">
+      <p class="note">These are the game's six heroes, shared with everybody who signs in.
+      Tune their sliders, gear and Look to try things out — hero changes last for this
+      visit only. Your own forged characters (next tabs) are the ones that save.</p>
+      <div id="heroPicker" class="picker" role="group" aria-label="Choose a hero"></div>
+      <div id="heroSheet"></div>
+    </section>
+
+    <!-- ===== My characters ===== -->
+    <section id="view-mine" class="view" hidden>
+      <div id="myListWrap">
+        <p class="note">Every character you forge saves here, under your account only.
+        Tap one to open its sheet.</p>
+        <div id="myList"></div>
+        <p id="myEmpty" class="note" hidden>You have not forged a character yet.
+        Use the <b>Forge a Character</b> tab to make your first one.</p>
+      </div>
+      <div id="charSheetWrap" hidden>
+        <button type="button" id="backToMine">← Back to my characters</button>
+        <div id="charSheet"></div>
+      </div>
+    </section>
+
+    <!-- ===== Forge a character ===== -->
+    <section id="view-forge" class="view" hidden>
+      <p class="note">Describe your character. You get a full character sheet —
+      ability sliders under your class's caps and point pool, up to three
+      weapons, perk and Death Blow — saved to your account. On the sheet you
+      can then send the character to Mike to have its pencil-sketch portrait
+      created — and its three Campaigns of Friends backstory tales written,
+      one for each weapon, just like the band's.</p>
+      <form id="forgeForm" class="card form">
+        <label>Character name <span class="req">(needed)</span>
+          <input id="f-name" type="text" maxlength="60" placeholder="e.g. Wren" required />
+        </label>
+        <label>Class <span class="req">(needed)</span>
+          <select id="f-class" required></select>
+          <span class="hint" id="classHint"></span>
+        </label>
+        <label>Race
+          <input id="f-race" type="text" maxlength="60" placeholder="e.g. Human, Elf, Dwarf — your words" />
+        </label>
+        <label>Weapon name <span class="req">(needed)</span>
+          <input id="f-weapon" type="text" maxlength="60" placeholder="e.g. Voting Crossbow" required />
+        </label>
+        <label>Weapon damage die <span class="req">(needed)</span>
+          <select id="f-die" required>
+            <option value="4">1d4 — small and quick</option>
+            <option value="6">1d6 — light</option>
+            <option value="8" selected>1d8 — standard</option>
+            <option value="10">1d10 — heavy</option>
+            <option value="12">1d12 — heaviest swing</option>
+            <option value="20">1d20 — wild card</option>
+          </select>
+        </label>
+        <label>Weapon 2 name (optional)
+          <input id="f-weapon2" type="text" maxlength="60" placeholder="e.g. Lantern of the Long Count" />
+          <span class="hint">Optional — leave blank and your class list provides one.</span>
+        </label>
+        <label>Weapon 2 damage die
+          <select id="f-die2">
+            <option value="4">1d4 — small and quick</option>
+            <option value="6">1d6 — light</option>
+            <option value="8" selected>1d8 — standard</option>
+            <option value="10">1d10 — heavy</option>
+            <option value="12">1d12 — heaviest swing</option>
+            <option value="20">1d20 — wild card</option>
+          </select>
+          <span class="hint">Only used if you named Weapon 2.</span>
+        </label>
+        <label>Weapon 3 name (optional)
+          <input id="f-weapon3" type="text" maxlength="60" placeholder="e.g. Pocket Tally Stick" />
+          <span class="hint">Optional — leave blank and your class list provides one.</span>
+        </label>
+        <label>Weapon 3 damage die
+          <select id="f-die3">
+            <option value="4">1d4 — small and quick</option>
+            <option value="6">1d6 — light</option>
+            <option value="8" selected>1d8 — standard</option>
+            <option value="10">1d10 — heavy</option>
+            <option value="12">1d12 — heaviest swing</option>
+            <option value="20">1d20 — wild card</option>
+          </select>
+          <span class="hint">Only used if you named Weapon 3.</span>
+        </label>
+        <label>Pose — what are they doing in their portrait?
+          <input id="f-pose" type="text" maxlength="160" placeholder="e.g. Feet planted wide, crossbow raised and aimed" />
+        </label>
+        <label>Holding — anything in their hands besides the weapon?
+          <input id="f-holding" type="text" maxlength="120" placeholder="e.g. A lantern in the left hand" />
+        </label>
+        <label>Attire 1 — their main outfit <span class="req">(needed)</span>
+          <input id="f-attire1" type="text" maxlength="160" placeholder="e.g. Barista apron over street clothes, work boots" required />
+          <span class="hint">Every character gets three outfits, like the band. This is the one they wear most.</span>
+        </label>
+        <label>Attire 2 — a second outfit (can be blank)
+          <input id="f-attire2" type="text" maxlength="160" placeholder="e.g. Market-day denim and a skirt" />
+          <span class="hint">Leave it blank and the sketch artist chooses one, in character.</span>
+        </label>
+        <label>Attire 3 — a third outfit (can be blank)
+          <input id="f-attire3" type="text" maxlength="160" placeholder="e.g. Night-watch cloak and soft boots" />
+          <span class="hint">Leave it blank and the sketch artist chooses one, in character.</span>
+        </label>
+        <label>One-line description — who are they?
+          <input id="f-desc" type="text" maxlength="200" placeholder="e.g. Counts every ballot twice and trusts the tally" />
+        </label>
+        <label>Perk — their special edge, in your words
+          <input id="f-perk" type="text" maxlength="200" placeholder="e.g. Steady Aim — +2 to hit when standing still" />
+        </label>
+        <label>Death Blow name — their finishing move
+          <input id="f-death" type="text" maxlength="80" placeholder="e.g. The Recount" />
+        </label>
+        <label>Your camp action — pick a kind by what it does <span class="req">(needed)</span>
+          <select id="f-camp-kind" required></select>
+          <span class="hint" id="campKindHint"></span>
+          <span class="hint">When the band makes camp in a run, this is your character's gift to it. The kinds are named for the band's own camp gifts so you can see what each one does — yours gets your own name below.</span>
+        </label>
+        <label>Your camp action's name — your own words <span class="req">(needed)</span>
+          <input id="f-camp-name" type="text" maxlength="60" placeholder="e.g. The Lantern Litany" required />
+        </label>
+        <label>Your camp action — one line of flavor <span class="req">(needed)</span>
+          <input id="f-camp-text" type="text" maxlength="200" placeholder="e.g. She raises the lantern and reads the road ahead aloud" required />
+          <span class="hint">Your name and line are set in stone when the character is forged — like their Death Blow name, they cannot be changed afterwards.</span>
+        </label>
+        <button class="primary" type="submit">Forge this character</button>
+        <p id="forgeError" class="error" role="alert"></p>
+      </form>
+    </section>
+
+    <!-- ===== Mike's inbox (admin only) ===== -->
+    <section id="view-inbox" class="view" hidden>
+      <p class="note">Sketch requests from everybody, in one queue.
+      <b>New</b> = a friend sent a character to you. Check the boxes, use
+      <b>Submit to Kendo for sketch creation</b> to bundle the briefs, paste the
+      bundle into your chat with Kendo, and when the art comes back, attach it
+      here — one file at a time, or all at once with the bulk attach.
+      Kendo returns a <b>full set of nine files per character</b> (three attire
+      portraits, each with its own skin mask and hair mask, all named by the
+      character's doc ID) <b>plus a tenth item</b> — the character's tales file,
+      <b>&lt;docId&gt;--tales.json</b>, carrying their three Campaigns of
+      Friends backstory tales. A full set completes the character: the friend
+      then has all three attires and every skin-tone and hair-color
+      customization the band's heroes have. A single portrait file still lands
+      as an interim portrait, but it does not complete the set. The tales file
+      lands on the sheet whenever it arrives — it does not hold up completion.</p>
+
+      <div class="card">
+        <h2>Attach returned portraits (bulk)</h2>
+        <p class="hint">Pick all the files Kendo returned at once — portraits,
+        masks and the tales .json alike. Files are grouped by the doc ID in
+        their names and pushed to that friend's sheet. A character completes
+        only when all nine of its art files have landed — partial sets are
+        reported file by file and leave the character uncompleted. Tales are
+        reported separately: landed, missing or invalid.</p>
+        <label class="filebtn">Choose portrait files
+          <input id="bulkFiles" type="file" accept="image/*,.webp,.json" multiple />
+        </label>
+        <ul id="bulkResults" class="results"></ul>
+      </div>
+
+      <div class="card" id="batchCard">
+        <h2>Send briefs to Kendo</h2>
+        <label class="row"><input type="checkbox" id="selectAllNew" />
+          Select all New requests</label>
+        <p class="hint"><span id="selCount">0 selected</span> · the button works when at least one New request is checked.</p>
+        <button id="submitKendoBtn" class="primary" type="button" disabled>Submit to Kendo for sketch creation</button>
+        <div id="batchOut" hidden>
+          <label>Batch document — copy it, or download it, and paste it into your chat with Kendo
+            <textarea id="batchText" rows="16" readonly></textarea>
+          </label>
+          <div class="row">
+            <button type="button" id="copyBatchBtn">Copy batch</button>
+            <button type="button" id="downloadBatchBtn">Download .txt</button>
+          </div>
+          <p class="hint" id="batchNote" role="status"></p>
+        </div>
+      </div>
+
+      <h2>New — waiting to go to Kendo</h2>
+      <div id="inboxNew"></div>
+      <h2>With Kendo — being created</h2>
+      <div id="inboxSubmitted"></div>
+      <h2>Done — interim portrait delivered</h2>
+      <div id="inboxDone"></div>
+      <h2>Complete — full set delivered</h2>
+      <div id="inboxComplete"></div>
+    </section>
+
+    <!-- ===== Campaigns (admin only): the game-night ledger ===== -->
+    <section id="view-campaigns" class="view" hidden>
+      <p class="note">The game-night ledger for the Roll20 group — Mike's surface only;
+      players never see it. Players push a character from their own sheet
+      (<b>Push to Mike for game night</b>); the pushed sheets stage below in
+      <b>the Band</b>, already connected to their humans. Confirm each pairing
+      (or type the name they play under that night), name the module, pick the
+      date, and save — that writes one campaign record. After the night, add the
+      highlights and the players' email addresses to the record, and
+      <b>Draft email</b> opens the next-day group email in your own mail program,
+      prefilled from the record. <b>Play</b> builds the night's setup prompt —
+      it cannot reach Kendo by itself, so copy or download it and paste it into
+      your chat with Kendo; that paste is the whole summons.</p>
+
+      <div class="card form" id="bandCard">
+        <h2>The Band — staged for the next night</h2>
+        <p class="hint">Every sheet a player has pushed, pre-connected to its human
+        (the account that forged it). Check the ones playing this night, confirm
+        or override the name each plays under, then save the campaign.</p>
+        <label>Module / adventure name <span class="req">(needed)</span>
+          <input id="campName" type="text" maxlength="120" placeholder="e.g. Module Q1 - Queen of the Demonweb Pits" />
+        </label>
+        <label>Date played <span class="req">(needed)</span>
+          <input id="campDate" type="date" />
+        </label>
+        <div id="bandList"></div>
+        <button id="saveCampaignBtn" class="primary" type="button">Save campaign</button>
+        <p class="hint" id="campSaveNote" role="status"></p>
+      </div>
+
+      <div class="card" id="playCard">
+        <h2>Play — set up the night</h2>
+        <p class="hint">Check one saved campaign in the menu below, then press Play.
+        Play builds the setup prompt (campaign, date, and every player's Roll20
+        import line) and marks the campaign <b>sent for setup</b>. This page
+        cannot summon Kendo by itself — paste the prompt into your chat with
+        Kendo, and Kendo sets up the Roll20 game and says READY there. When you
+        see it, flip the campaign's play state to <b>ready</b> in its card.</p>
+        <button id="playBtn" class="primary" type="button" disabled>Play the checked campaign</button>
+        <div id="playOut" hidden>
+          <label>Setup prompt — copy it into your chat with Kendo
+            <textarea id="playText" rows="16" readonly></textarea>
+          </label>
+          <div class="row">
+            <button type="button" id="copyPlayBtn">Copy prompt</button>
+            <button type="button" id="downloadPlayBtn">Download .txt</button>
+          </div>
+          <p class="hint" id="playNote" role="status"></p>
+        </div>
+      </div>
+
+      <h2>Campaigns menu</h2>
+      <div class="card form">
+        <label>Player name
+          <input id="campFilterHuman" type="text" placeholder="e.g. Bob" />
+        </label>
+        <label>Character profile name
+          <input id="campFilterChar" type="text" placeholder="e.g. Prya" />
+        </label>
+        <label>On this date
+          <input id="campFilterDate" type="date" />
+        </label>
+        <label>From date
+          <input id="campFilterFrom" type="date" />
+        </label>
+        <label>To date
+          <input id="campFilterTo" type="date" />
+        </label>
+        <div class="row">
+          <button type="button" id="campFilterClear">Clear filters</button>
+          <span class="hint" id="campFilterNote" role="status"></span>
+        </div>
+      </div>
+      <p id="campEmpty" class="note" hidden>No campaigns saved yet. Stage the Band above and save the first one.</p>
+      <div id="campList"></div>
+    </section>
+  </main>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

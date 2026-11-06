@@ -1,0 +1,108 @@
+/* Power Card — Character Forge: mobile-first, plain and roomy.
+   Look frame/layer rules adapted from the game's own CSS
+   (hand-off package code/look-css.css). */
+:root{
+  --ink:#1d2733; --muted:#5b6a77; --paper:#faf6ee; --card:#ffffff;
+  --line:#d8d2c4; --accent:#0e7c74; --accent-ink:#ffffff;
+  --warn:#a33b1f; --ok:#217a3c;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --ink:#e8e4da; --muted:#9aa7b1; --paper:#14181d; --card:#1e242c; --line:#39424d; }
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--paper);color:var(--ink)}
+.screen{padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 auto 16px;max-width:640px}
+h1{font-size:1.35rem;margin:.2em 0 .5em}
+h2{font-size:1.1rem;margin:20px 0 8px}
+.big{font-size:1.05rem}
+.note{color:var(--muted);max-width:640px;margin:12px auto}
+.hint{display:block;color:var(--muted);font-size:.85rem;margin-top:4px}
+.error{color:var(--warn);min-height:1em}
+button{font:inherit;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600;width:100%}
+button:disabled{opacity:.45;cursor:not-allowed}
+button[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px;font-weight:600}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.who{color:var(--muted);font-size:.85rem}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px 0;max-width:720px;margin:0 auto}
+main{padding:0 16px 40px;max-width:720px;margin:0 auto}
+.picker{display:flex;gap:8px;flex-wrap:wrap;margin:12px auto;max-width:640px}
+.sheet{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;max-width:640px;margin:0 auto 16px}
+.sheet-tag{color:var(--muted);font-size:.85rem;letter-spacing:.02em}
+.sheet h3{font-size:1.5rem;margin:.15em 0}
+.age{color:var(--muted)}
+.weapon-line{font-weight:600;margin:.4em 0}
+.perk{border-left:3px solid var(--accent);padding:6px 10px;margin:10px 0;background:var(--paper);border-radius:0 8px 8px 0}
+.death-line{color:var(--muted);font-size:.92rem}
+/* Look portrait frame (game CSS, adapted class names) */
+.look-frame{position:relative;display:block;width:100%;max-width:420px;margin:10px auto;overflow:hidden;border-radius:8px}
+.look-frame img.sketch{display:block;width:100%;height:auto}
+.look-layer{position:absolute;inset:0;border-radius:8px;pointer-events:none;background-repeat:no-repeat;background-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-position:0 0;mask-position:0 0;mask-mode:alpha}
+img.portrait{max-width:420px}
+.look-shoes{margin:10px 0 0;font-size:.84rem;color:var(--muted)}
+.stats-head{font-weight:600;display:block;margin-top:14px}
+.pool-line{display:block;color:var(--muted);font-size:.9rem;margin:2px 0}
+.pool-note{display:block;color:var(--accent);font-size:.88rem;min-height:1.1em}
+.stat{display:flex;align-items:center;gap:10px;margin:6px 0}
+.stat label{width:52px;font-weight:600;font-size:.9rem}
+.stat input[type="range"]{flex:1;min-height:32px}
+.stat output{width:28px;text-align:right;font-weight:600}
+.stat .mod{width:44px;color:var(--muted);font-size:.85rem}
+.derived{color:var(--muted);font-size:.92rem}
+.cap-note{color:var(--muted);font-size:.9rem;font-style:italic}
+.gear-sub{font-weight:600;display:block;margin:14px 0 6px}
+.pick-grid{display:flex;flex-wrap:wrap;gap:8px}
+.pick-card{flex:1 1 150px;text-align:left}
+.pick-card .gc-name{display:block;font-weight:600}
+.pick-card .gc-fx{display:block;color:var(--muted);font-size:.85rem;margin-top:2px}
+/* Campaigns of Friends tale panel (forged sheets): one shared
+   panel, slow auto-scroll, tap the panel to pause / resume. */
+.tale-panel{margin-top:10px;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:12px;cursor:pointer}
+.tale-title{display:block;font-weight:600;font-size:1.05rem;margin-bottom:6px}
+.tale-view{max-height:230px;overflow:hidden}
+.tale-text{white-space:pre-wrap;line-height:1.55;will-change:transform}
+.tale-state{display:block;color:var(--muted);font-size:.82rem;margin-top:8px}
+/* Session credits pushes (SESSION-CREDITS-PUSH-SPEC.md):
+   the Campaign adventures dropdown on a character sheet —
+   one card per pushed session, opening its credits roll. */
+.adventures{margin:14px 0 6px}
+.adv-list{list-style:none;padding:0;margin:8px 0}
+.adv-list li{margin:6px 0}
+.adv-entry{display:block;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);text-decoration:none}
+.adv-entry:hover,.adv-entry:focus{border-color:var(--accent)}
+.adv-label{display:block;font-weight:600}
+.adv-meta{display:block;color:var(--muted);font-size:.88rem;margin-top:2px}
+.adv-played{display:block;color:var(--muted);font-size:.88rem;margin-top:2px}
+.swatch{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid var(--line);vertical-align:-2px;margin-right:6px}
+.form label{display:block;margin:12px 0;font-weight:600}
+.form input[type="text"],.form input[type="date"],.form select,.form textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);margin-top:4px}
+/* Campaigns (game-night ledger): field labels outside .form,
+   roster tables, and the Band's per-entry name input. */
+.fld{display:block;margin:10px 0;font-weight:600}
+.txtin{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);margin-top:4px}
+table.roster{width:100%;border-collapse:collapse;margin:10px 0}
+table.roster th,table.roster td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-size:.92rem;vertical-align:top}
+[data-band-check],[data-play-check]{width:22px;height:22px;margin-top:2px}
+.req{color:var(--muted);font-weight:400;font-size:.85rem}
+.char-row{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;margin:6px 0}
+.chip{font-size:.78rem;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--muted);white-space:nowrap}
+.chip.done{color:var(--ok);border-color:var(--ok)}
+.status-line{font-weight:600;margin:8px 0}
+textarea{width:100%;font:inherit;font-size:.85rem;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
+pre.brief{white-space:pre-wrap;word-break:break-word;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:.85rem}
+.req-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px auto;max-width:640px}
+.req-head{display:flex;gap:10px;align-items:flex-start}
+.req-head input[type="checkbox"]{width:22px;height:22px;margin-top:2px}
+.req-meta{color:var(--muted);font-size:.88rem}
+.docid{font-family:ui-monospace,monospace;font-size:.78rem;color:var(--muted);word-break:break-all}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.filebtn{display:inline-block;padding:10px 14px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--card)}
+.filebtn input[type="file"]{display:block;margin-top:6px;font-size:.85rem}
+.results{list-style:none;padding:0;margin:10px 0}
+.results li{padding:4px 0}
+.results .ok{color:var(--ok)}
+.results .bad{color:var(--warn)}
+details{margin:8px 0}
+summary{cursor:pointer;font-weight:600}
+.danger{color:var(--warn);border-color:var(--warn)}

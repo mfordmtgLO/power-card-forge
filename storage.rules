@@ -1,0 +1,58 @@
+// ============================================================
+// Power Card Character Forge — Storage security rules
+// ------------------------------------------------------------
+// Interim portraits live at portraits/<ownerUid>/<characterId>.webp.
+// A character's full set lives one level deeper:
+//   portraits/<ownerUid>/<characterId>/attireN.webp        (portraits)
+//   masks/<ownerUid>/<characterId>/attireN-skin.webp      (skin masks)
+//   masks/<ownerUid>/<characterId>/attireN-hair.webp      (hair masks)
+// The owner whose uid is in the path can read and write their
+// own files. The ADMIN may read any of these files and may
+// WRITE under any uid (that is the push-back from Mike's
+// Inbox — interim portraits and full sets alike) — and
+// nowhere else. Default-deny otherwise.
+//
+// Replace fordmj@gmail.com with the same email used in
+// firebase-config.js (ADMIN_EMAIL) and firestore.rules —
+// all three must match exactly.
+// ============================================================
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == "fordmj@gmail.com";
+    }
+
+    // The interim portrait is the file <characterId>.webp directly
+    // under the owner's folder. Storage rules cannot glue an
+    // extension onto a path variable ({characterId}.webp is a
+    // compile error — caught by the console at first paste,
+    // 2026-11-06), so the file name is one whole-segment variable
+    // and the .webp suffix is enforced by the name check instead.
+    match /portraits/{ownerUid}/{fileName} {
+      allow read: if isSignedIn() && (request.auth.uid == ownerUid || isAdmin())
+                  && fileName.matches('.*[.]webp');
+      allow write: if isSignedIn() && (request.auth.uid == ownerUid || isAdmin())
+                  && fileName.matches('.*[.]webp');
+    }
+
+    match /portraits/{ownerUid}/{characterId}/{fileName} {
+      allow read: if isSignedIn() && (request.auth.uid == ownerUid || isAdmin());
+      allow write: if isSignedIn() && (request.auth.uid == ownerUid || isAdmin());
+    }
+
+    match /masks/{ownerUid}/{characterId}/{fileName} {
+      allow read: if isSignedIn() && (request.auth.uid == ownerUid || isAdmin());
+      allow write: if isSignedIn() && (request.auth.uid == ownerUid || isAdmin());
+    }
+
+    // Default-deny: no other path is reachable.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
