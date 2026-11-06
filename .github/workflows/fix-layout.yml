@@ -1,0 +1,23 @@
+name: Fix folder layout
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Move flattened files into their folders
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p assets/portraits assets/masks tests roll20
+          for f in sketch-*.webp; do git mv "$f" assets/portraits/; done
+          for f in mask-*.webp; do git mv "$f" assets/masks/; done
+          for f in *.test.mjs; do git mv "$f" tests/; done
+          git mv forge-importer.js roll20/
+          git mv EXPORT-FORMAT.md roll20/
+          git mv README.md roll20/
+          git commit -m "Restore folder layout (assets/tests/roll20)"
+          git push
