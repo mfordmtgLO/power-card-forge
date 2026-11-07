@@ -56,6 +56,10 @@ img.portrait{max-width:420px}
 .pick-card{flex:1 1 150px;text-align:left}
 .pick-card .gc-name{display:block;font-weight:600}
 .pick-card .gc-fx{display:block;color:var(--muted);font-size:.85rem;margin-top:2px}
+.look-default-btn{flex:1 1 100%;margin-top:8px}
+.look-default-btn[hidden]{display:none}
+.look-note{color:var(--muted);font-size:.9rem;line-height:1.45;max-width:640px;margin:10px auto;text-align:left}
+.look-note b{color:var(--ink)}
 /* Campaigns of Friends tale panel (forged sheets): one shared
    panel, slow auto-scroll, tap the panel to pause / resume. */
 .tale-panel{margin-top:10px;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:12px;cursor:pointer}

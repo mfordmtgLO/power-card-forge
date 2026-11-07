@@ -64,7 +64,7 @@ function heroSt(key) {
   if (!heroState[key]) {
     const defs = {};
     for (const k of STAT_KEYS) defs[k] = HEROES[key].sliders[k].def;
-    heroState[key] = { skin: 0, hair: 0, attire: 0, sliders: defs, weapon: 0, spells: [0, 1] };
+    heroState[key] = { skin: 0, hair: 0, attire: 0, sketch: false, sliders: defs, weapon: 0, spells: [0, 1] };
   }
   return heroState[key];
 }
@@ -185,21 +185,32 @@ function renderLook(key) {
   const frame = document.querySelector('[data-frame="' + key + '"]');
   if (!frame) return;
   const img = frame.querySelector("img.sketch");
-  // Maya's Trail Set wears the finished ChatGPT combo portraits — one real
-  // file per hair × skin pair, exactly as the game wires them (swap #14).
-  // No mask tinting for this set; other attires keep the sketch treatment.
-  if (key === "maya" && st.attire === 0) {
-    const hairSlug = ["natural-brown", "auburn", "silver", "teal"][st.hair] || "natural-brown";
-    const skinSlug = ["fair", "warm", "deep", "golden"][st.skin] || "fair";
-    const src = "assets/looks/maya-trail-" + hairSlug + "-" + skinSlug + ".webp";
-    if (img.getAttribute("src") !== src) img.src = src;
-    img.alt = "Maya in the Trail Set — " + LOOK_HAIRS[st.hair].name + " hair, " +
-      LOOK_SKINS[st.skin].name + " skin (finished portrait)";
-    frame.dataset.sig = "maya-trail|" + st.skin + "|" + st.hair;
+  // Maya's looks follow the game's wiring exactly. Her Trail Set wears the
+  // finished ChatGPT combo portraits — one real file per hair × skin pair —
+  // unless her original-sketch state is on ("Back to default look"). Her
+  // Market Day and Night Watch sets always show their plain pencil sketch
+  // exactly as drawn; the hair/skin taps are remembered but never color them.
+  if (key === "maya") {
+    const attM = LOOK_ATTIRE.maya[st.attire];
     frame.querySelectorAll(".look-layer").forEach((n) => n.remove());
-    const att0 = LOOK_ATTIRE.maya[0];
-    const shoes0 = document.querySelector('[data-shoes="maya"]');
-    if (shoes0) shoes0.innerHTML = "Shoes: <b>" + esc(att0.shoes) + "</b> — never chosen; they auto-fill from the " + esc(att0.bottom) + ".";
+    if (st.attire === 0 && !st.sketch) {
+      const hairSlug = ["natural-brown", "auburn", "silver", "teal"][st.hair] || "natural-brown";
+      const skinSlug = ["fair", "warm", "deep", "golden"][st.skin] || "fair";
+      const src = "assets/looks/maya-trail-" + hairSlug + "-" + skinSlug + ".webp";
+      if (img.getAttribute("src") !== src) img.src = src;
+      img.alt = "Maya in the Trail Set — " + LOOK_HAIRS[st.hair].name + " hair, " +
+        LOOK_SKINS[st.skin].name + " skin (finished portrait)";
+      frame.dataset.sig = "maya-trail|" + st.skin + "|" + st.hair;
+    } else {
+      const artKeyM = (LOOK_ART.maya || [])[st.attire] || "maya";
+      const artM = ART[artKeyM];
+      if (artM && img.getAttribute("src") !== artM) img.src = artM;
+      img.alt = st.attire === 0 ? HERO_ALT.maya
+        : "Gray pencil sketch of Maya in the " + attM.set + " outfit — " + attM.top + ", " + attM.bottom + " and " + attM.shoes;
+      frame.dataset.sig = "maya-sketch|" + st.attire + "|" + (st.sketch ? "d" : "p");
+    }
+    const shoesM = document.querySelector('[data-shoes="maya"]');
+    if (shoesM) shoesM.innerHTML = "Shoes: <b>" + esc(attM.shoes) + "</b> — never chosen; they auto-fill from the " + esc(attM.bottom) + ".";
     return;
   }
   const artKey = (LOOK_ART[key] || [])[st.attire] || key;
@@ -296,9 +307,12 @@ function renderHeroSheet(key) {
     '<span class="gear-sub">Weapon — pick 1 of 3</span><div data-weapons></div>' +
     '<span class="gear-sub">Spells — carry exactly 2 of 4</span><div data-spells></div>' +
     '<span class="gear-sub">The band\'s shared pack — carry exactly 2 of 5 (same pack on every sheet)</span><div data-pack></div>' +
-    '<span class="gear-sub">Look — story only: it changes how ' + esc(F.name) + ' looks, never the math</span>' +
+    (key === "maya"
+      ? '<p class="look-note"><b>Look is story only — it changes how your traveler looks, never the math.</b> On Maya\'s <b>Trail Set</b>, hair color and skin tone work <b>together</b>: every pairing of the four hair colors and four skin tones below is its own finished portrait, and the portrait at the top of her sheet changes the moment you tap either one — try it and watch. Her Market Day and Night Watch sets always show her plain pencil sketch exactly as drawn — the hair and skin buttons never color them; they only pick her Trail Set portrait. Attire is one set, top and bottom named together. <b>Back to default look</b> (under Hair, on the Trail Set) brings back her original uncolored pencil sketch — and tapping any hair color or skin tone brings the finished color portraits straight back.</p>'
+      : '<span class="gear-sub">Look — story only: it changes how ' + esc(F.name) + ' looks, never the math</span>') +
     '<span class="gear-sub">Skin</span><div data-skins></div>' +
     '<span class="gear-sub">Hair</span><div data-hairs></div>' +
+    (key === "maya" ? '<div data-look-default></div>' : '') +
     '<span class="gear-sub">Attire — one set, top and bottom together</span><div data-attires></div>' +
     '<p class="look-shoes" data-shoes="' + key + '"></p>' +
     '</div>';
@@ -328,13 +342,27 @@ function renderHeroSheet(key) {
       drawPicks();
     }));
     host.querySelector("[data-skins]").innerHTML = pickCards(LOOK_SKINS, (i) => i === st.skin, () => "");
-    host.querySelectorAll("[data-skins] [data-pick]").forEach((b) => b.addEventListener("click", () => { st.skin = +b.dataset.pick; drawPicks(); renderLook(key); }));
+    host.querySelectorAll("[data-skins] [data-pick]").forEach((b) => b.addEventListener("click", () => { st.skin = +b.dataset.pick; if (key === "maya") st.sketch = false; drawPicks(); renderLook(key); }));
     host.querySelector("[data-hairs]").innerHTML = pickCards(LOOK_HAIRS, (i) => i === st.hair, () => "");
-    host.querySelectorAll("[data-hairs] [data-pick]").forEach((b) => b.addEventListener("click", () => { st.hair = +b.dataset.pick; drawPicks(); renderLook(key); }));
+    host.querySelectorAll("[data-hairs] [data-pick]").forEach((b) => b.addEventListener("click", () => { st.hair = +b.dataset.pick; if (key === "maya") st.sketch = false; drawPicks(); renderLook(key); }));
     host.querySelector("[data-attires]").innerHTML = pickCards(
       LOOK_ATTIRE[key].map((a) => ({ name: a.set, fx: a.top + " + " + a.bottom + " — worn together. Shoes (" + a.shoes + ") auto-fill." })),
       (i) => i === st.attire, () => "");
     host.querySelectorAll("[data-attires] [data-pick]").forEach((b) => b.addEventListener("click", () => { st.attire = +b.dataset.pick; drawPicks(); renderLook(key); }));
+    // Maya's "Back to default look" (canonical Maya only, as in the game):
+    // a full-width card under her Hair picks, shown only on the Trail Set,
+    // pressed while her original-sketch state is on. One tap: Trail Set,
+    // Natural hair, Fair skin, original sketch.
+    const defHost = host.querySelector("[data-look-default]");
+    if (defHost) {
+      defHost.innerHTML = '<div class="pick-grid"><button type="button" class="pick-card look-default-btn" data-look-default-btn aria-pressed="' + (st.sketch ? "true" : "false") + '"' + (st.attire !== 0 ? " hidden" : "") + '>' +
+        '<span class="gc-name">⟲ Back to default look</span>' +
+        '<span class="gc-fx">Natural brown hair · Fair skin · Original sketch — the uncolored pencil portrait she started with, no color added.</span></button></div>';
+      defHost.querySelector("[data-look-default-btn]").addEventListener("click", () => {
+        st.attire = 0; st.hair = 0; st.skin = 0; st.sketch = true;
+        drawPicks(); renderLook(key);
+      });
+    }
   };
   let spellNote = "", packNote = "";
   drawPicks();
