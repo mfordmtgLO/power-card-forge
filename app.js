@@ -185,6 +185,23 @@ function renderLook(key) {
   const frame = document.querySelector('[data-frame="' + key + '"]');
   if (!frame) return;
   const img = frame.querySelector("img.sketch");
+  // Maya's Trail Set wears the finished ChatGPT combo portraits — one real
+  // file per hair × skin pair, exactly as the game wires them (swap #14).
+  // No mask tinting for this set; other attires keep the sketch treatment.
+  if (key === "maya" && st.attire === 0) {
+    const hairSlug = ["natural-brown", "auburn", "silver", "teal"][st.hair] || "natural-brown";
+    const skinSlug = ["fair", "warm", "deep", "golden"][st.skin] || "fair";
+    const src = "assets/looks/maya-trail-" + hairSlug + "-" + skinSlug + ".webp";
+    if (img.getAttribute("src") !== src) img.src = src;
+    img.alt = "Maya in the Trail Set — " + LOOK_HAIRS[st.hair].name + " hair, " +
+      LOOK_SKINS[st.skin].name + " skin (finished portrait)";
+    frame.dataset.sig = "maya-trail|" + st.skin + "|" + st.hair;
+    frame.querySelectorAll(".look-layer").forEach((n) => n.remove());
+    const att0 = LOOK_ATTIRE.maya[0];
+    const shoes0 = document.querySelector('[data-shoes="maya"]');
+    if (shoes0) shoes0.innerHTML = "Shoes: <b>" + esc(att0.shoes) + "</b> — never chosen; they auto-fill from the " + esc(att0.bottom) + ".";
+    return;
+  }
   const artKey = (LOOK_ART[key] || [])[st.attire] || key;
   const art = ART[artKey];
   if (art && img.getAttribute("src") !== art) img.src = art;
